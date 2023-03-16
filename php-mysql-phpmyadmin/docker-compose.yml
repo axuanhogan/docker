@@ -2,24 +2,34 @@ version: '3.3'
 
 services:
   phpapache:
-    container_name: php8.1-apache
-    restart: always
-    image: php:8.1-apache
+    container_name: php7.2-apache
+    image: php:7.2-apache
     depends_on:
       - db
     ports:
       - "81:80"
     volumes:
       - .:/var/www/html
-    command: bash -c "while ! curl -s db:3306 > /dev/null; do echo waiting for db; sleep 7; done; sh -c phpapache-start.sh"
+    command:
+      - sh
+      - -c
+      - |
+        docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable pdo_mysql
+        echo "ServerName localhost" >> /etc/apache2/apache2.conf
+        a2enmod rewrite
+        service apache2 restart
+        apt-get update
+        apt-get install -y curl zip unzip
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer --version=2.3.10
   db:
     container_name: mysql-8.0.25
     restart: always
-    platform: linux/x86_64 # 解決 no matching manifest for linux/arm64/v8 in the manifest list entries
+    platform: linux/x86_64 # Fix no matching manifest for linux/arm64/v8 in the manifest list entries
     image: mysql:8.0.25
     ports:
       - "3308:3306"
     environment:
+      TZ: Asia/Taipei
       MYSQL_DATABASE: db
       MYSQL_ROOT_PASSWORD: root
     volumes:
